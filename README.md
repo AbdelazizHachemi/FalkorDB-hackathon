@@ -29,9 +29,9 @@ The app and database ports bind to loopback by default. The API has no authentic
 
 ## Deploy on a VPS
 
-The Compose stack runs the app and FalkorDB privately and puts Caddy in front for HTTPS. The only public ports are 80 and 443; port 3000 is bound to VPS loopback for optional SSH-tunnel access to FalkorDB Browser. FalkorDB data and Caddy certificates use named Docker volumes. The app's demo API has no authentication and accepts synthetic writes, so use fictional data only and take the demo offline when it is no longer needed.
+The Compose stack runs the app and FalkorDB privately and exposes the app through a Cloudflare Quick Tunnel. It requires no domain or Cloudflare account. Port 3000 is bound to VPS loopback for optional SSH-tunnel access to FalkorDB Browser, and FalkorDB data uses a named Docker volume. Quick Tunnel URLs are temporary, may change when the tunnel restarts, and have no uptime guarantee. The app's demo API has no authentication and accepts synthetic writes. Use fictional data only; do not enter credentials or sensitive information, and take the demo offline when it is no longer needed.
 
-Requirements: a Linux VPS with Docker Engine and the Compose plugin, a domain name with an `A` record pointing to the VPS IPv4 address, and firewall access for TCP ports 22, 80, and 443. Allow UDP 443 too if you want HTTP/3. Do not open 6379.
+Requirements: a Linux VPS with Docker Engine and the Compose plugin, outbound internet access, and SSH access on TCP port 22. The tunnel uses outbound connections; no inbound HTTP/HTTPS firewall ports are needed. Do not open 6379.
 
 1. Push this folder to the public `AbdelazizHachemi/FalkorDB-hackathon` repository. From this folder, initialize and push only this project:
 
@@ -59,30 +59,26 @@ Requirements: a Linux VPS with Docker Engine and the Compose plugin, a domain na
 
 3. On the VPS, install Docker Engine and the Compose plugin using Docker's official Ubuntu installation steps: <https://docs.docker.com/engine/install/ubuntu/>. Add your login account to the `docker` group only if you understand that membership grants root-equivalent access; otherwise prefix Docker commands with `sudo`.
 
-4. Clone the public repo, set the domain, and start FalkorDB:
+4. Clone the public repo and start FalkorDB:
 
    ```bash
    git clone https://github.com/AbdelazizHachemi/FalkorDB-hackathon.git
    cd FalkorDB-hackathon
-   printf 'DOMAIN=demo.example.com\n' > .env
-   chmod 600 .env
    docker compose up -d falkordb
    ```
 
-   Replace `demo.example.com` with your domain. The ignored `.env` file is local configuration; never commit it.
-
-5. Seed the two synthetic graphs once, then build and start the app and HTTPS proxy:
+5. Seed the two synthetic graphs once, then build and start the app and tunnel:
 
    ```bash
    docker compose run --rm app npm run seed
    docker compose up -d --build
    docker compose ps
-   curl -fsS https://demo.example.com/health
+   docker compose logs cloudflared
    ```
 
-   `npm run seed` resets `held_a` and `held_b`; do not rerun it if you need to retain demo activity. The named FalkorDB volume survives container recreation; `docker compose down -v` deletes it. Caddy obtains and renews the TLS certificate automatically after DNS points to the VPS and ports 80/443 are reachable.
+   Copy the `https://….trycloudflare.com` URL from the `cloudflared` logs and open it in a browser. `npm run seed` resets `held_a` and `held_b`; do not rerun it if you need to retain demo activity. The named FalkorDB volume survives container recreation; `docker compose down -v` deletes it. Cloudflare documents Quick Tunnels as testing/development only; they have no uptime guarantee, support up to 200 in-flight requests, and do not support Server-Sent Events (SSE).
 
-6. For updates, run `git pull` and `docker compose up -d --build`. To inspect logs, use `docker compose logs -f app caddy falkordb`. For FalkorDB Browser from your computer, open an SSH tunnel with `ssh -i ~/.ssh/id_ed25519_falkordb_hackathon_vps -L 3000:127.0.0.1:3000 USER@VPS_IP`, then browse to <http://localhost:3000>.
+6. For updates, run `git pull` and `docker compose up -d --build`; if the tunnel restarts and gets a new URL, get it again with `docker compose logs cloudflared`. To inspect logs, use `docker compose logs -f app cloudflared falkordb`. For FalkorDB Browser from your computer, open an SSH tunnel with `ssh -i ~/.ssh/id_ed25519_falkordb_hackathon_vps -L 3000:127.0.0.1:3000 USER@VPS_IP`, then browse to <http://localhost:3000>.
 
 ## Graph model
 

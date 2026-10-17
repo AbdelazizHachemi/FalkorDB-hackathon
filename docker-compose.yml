@@ -22,23 +22,12 @@ services:
       falkordb:
         condition: service_healthy
     restart: unless-stopped
-  caddy:
-    image: caddy:2-alpine
-    environment:
-      DOMAIN: ${DOMAIN:?Set DOMAIN in .env}
-    ports:
-      - "80:80"
-      - "443:443"
-      - "443:443/udp"
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
-      - caddy_config:/config
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    command: ["tunnel", "--no-autoupdate", "--url", "http://app:8787"]
     depends_on:
       - app
     restart: unless-stopped
 
 volumes:
-  caddy_data:
-  caddy_config:
   falkordb_data:
