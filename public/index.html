@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Held</title>
+    <style>
+      :root {
+        color: #e8eef4;
+        background: #10161c;
+        font-family: system-ui, sans-serif;
+      }
+      body { margin: 0 auto; max-width: 52rem; padding: 1.25rem 1.25rem 3rem; }
+      .banner { background: #8c2f2f; color: #fff; padding: 0.7rem 0.9rem; font-weight: 700; }
+      h1 { font-size: 1.4rem; margin: 1rem 0 0.2rem; }
+      .lede { color: #b7c3ce; margin-top: 0; }
+      .row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.8rem 0; }
+      button { font: inherit; padding: 0.6rem 0.85rem; border: 1px solid #3d4c5c; background: #18222c; color: inherit; cursor: pointer; }
+      button[aria-pressed="true"] { background: #004f90; border-color: #004f90; }
+      .graph { font-variant-numeric: tabular-nums; letter-spacing: 0.04em; }
+      .stage { margin-top: 0.6rem; min-height: 16rem; }
+      #session { margin: 0; color: #9fb0c0; font-family: ui-monospace, monospace; }
+      #session.fresh { animation: flash 0.7s ease; }
+      #decision { font-size: clamp(2.4rem, 8vw, 4.2rem); line-height: 1; margin: 0.35rem 0 0.8rem; text-transform: uppercase; min-height: 1.1em; }
+      #decision.allowed { color: #9ddeb4; }
+      #decision.blocked { color: #ffb4a8; }
+      #decision.down { color: #ffd59a; }
+      #decision.held { color: #d6e4f0; font-size: clamp(1.6rem, 4vw, 2.4rem); text-transform: none; }
+      .path { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.55rem; }
+      .step {
+        background: #18222c;
+        border-left: 4px solid #004f90;
+        padding: 0.65rem 0.8rem;
+        opacity: 0;
+        transform: translateY(10px);
+        animation: arrive 0.45s ease forwards;
+      }
+      .step b { display: block; font-size: 0.75rem; letter-spacing: 0.06em; text-transform: uppercase; color: #8ea0b3; font-weight: 650; }
+      .step.down { border-left-color: #c47b2b; }
+      .step.ok { border-left-color: #2f8f5b; }
+      details { margin-top: 1.4rem; color: #9fb0c0; }
+      pre { background: #0c1116; color: #d5dee7; border: 1px solid #2a3846; padding: 0.8rem; overflow: auto; white-space: pre-wrap; }
+      @keyframes arrive { to { opacity: 1; transform: none; } }
+      @keyframes flash { from { color: #fff; } to { color: #9fb0c0; } }
+      @media (prefers-reduced-motion: reduce) {
+        .step, #session.fresh { animation: none; opacity: 1; transform: none; }
+      }
+    </style>
+  </head>
+  <body>
+    <p class="banner">Synthetic demo. Not for treatment. A clinician decides what a real person takes.</p>
+    <h1>Held</h1>
+    <p class="lede">The ward agent writes a hold. A new session does not clear it. The pharmacy agent restarts ibuprofen only when FalkorDB returns no block path.</p>
+    <div class="row">
+      <button type="button" id="patient-a" aria-pressed="true">Patient A <span class="graph">held_a</span></button>
+      <button type="button" id="patient-b" aria-pressed="false">Patient B <span class="graph">held_b</span></button>
+    </div>
+    <div class="row">
+      <button type="button" id="record">Record kidney finding</button>
+      <button type="button" id="restart">Restart ibuprofen</button>
+    </div>
+    <div class="stage">
+      <p id="session">No session yet. The graph still remembers.</p>
+      <p id="decision" aria-live="polite"></p>
+      <ol id="path" class="path"></ol>
+    </div>
+    <details>
+      <summary>Raw JSON from FalkorDB</summary>
+      <pre id="out">No request yet.</pre>
+    </details>
+    <script>
+      const out = document.querySelector('#out')
+      const decision = document.querySelector('#decision')
+      const sessionLine = document.querySelector('#session')
+      const path = document.querySelector('#path')
+      let patient = 'patient_a'
+
+      function select(next) {
+        patient = next
+        document.querySelector('#patient-a').setAttribute('aria-pressed', String(next === 'patient_a'))
+        document.querySelector('#patient-b').setAttribute('aria-pressed', String(next === 'patient_b'))
+        decision.textContent = ''
+        decision.className = ''
+        path.replaceChildren()
+        out.textContent = 'Switched graph. Ask this patient before the last answer stays on screen.'
+      }
+
+      function paint(steps, kind) {
+        path.replaceChildren()
+        decision.className = kind
+        steps.forEach((step, index) => {
+          const item = document.createElement('li')
+          item.className = 'step ' + kind
+          item.style.animationDelay = (index * 160) + 'ms'
+          const label = document.createElement('b')
+          label.textContent = step.label
+          item.append(label, document.createTextNode(step.text))
+          path.append(item)
+        })
+      }
+
+      function show(status, payload) {
+        out.textContent = JSON.stringify({ status, ...payload }, null, 2)
+        if (!status || status >= 500) {
+          decision.textContent = 'no decision'
+          paint([{ label: 'Database', text: 'FalkorDB did not answer. This button cannot allow or block.' }], 'down')
+          return
+        }
+        if (payload.decision === 'blocked' && payload.rows && payload.rows.length) {
+          decision.textContent = 'blocked'
+          paint(payload.rows.flatMap((row) => [
+            { label: 'Drug', text: row.drug },
+            { label: 'Hold', text: row.hold + ' is in force' },
+            { label: 'Finding', text: row.finding },
+            { label: 'Label', text: row.label },
+            { label: 'Prescriber', text: row.prescriber },
+            { label: 'Admission', text: row.admission },
+            { label: 'Policy', text: row.policy },
+            { label: 'Source', text: row.url },
+          ]), 'blocked')
+          return
+        }
+        if (payload.decision === 'allowed') {
+          decision.textContent = 'allowed'
+          paint([{ label: 'blockPath', text: 'No row. No hold is in force on this graph, so the restart is an active order.' }], 'allowed')
+          return
+        }
+        if (payload.holdId) {
+          decision.textContent = 'hold written'
+          decision.className = 'held'
+          paint([
+            { label: 'Hold', text: payload.holdId },
+            { label: 'Handoff', text: 'The ward agent wrote it. The pharmacy agent has to read the graph.' },
+          ], 'held')
+          return
+        }
+        decision.textContent = 'no decision'
+        paint([{ label: 'Request', text: payload.error || 'Nothing was written.' }], 'down')
+      }
+
+      async function post(url, body) {
+        decision.textContent = ''
+        decision.className = ''
+        path.replaceChildren()
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(body),
+        })
+        const payload = await response.json()
+        show(response.status, payload)
+      }
+
+      document.querySelector('#patient-a').addEventListener('click', () => select('patient_a'))
+      document.querySelector('#patient-b').addEventListener('click', () => select('patient_b'))
+      document.querySelector('#record').addEventListener('click', () => {
+        post('/patients/' + patient + '/ward', { kind: 'kidney_impairment' })
+      })
+      document.querySelector('#restart').addEventListener('click', () => {
+        const session = crypto.randomUUID()
+        sessionLine.textContent = 'New session ' + session
+        sessionLine.classList.remove('fresh')
+        void sessionLine.offsetWidth
+        sessionLine.classList.add('fresh')
+        post('/patients/' + patient + '/pharmacy', { session, drug: 'ibuprofen' })
+      })
+    </script>
+  </body>
+</html>

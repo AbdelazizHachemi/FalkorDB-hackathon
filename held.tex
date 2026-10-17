@@ -1,0 +1,681 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[margin=2.2cm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{fancyhdr}
+\usepackage{parskip}
+
+\definecolor{accent}{RGB}{0,79,144}
+\definecolor{codebg}{RGB}{246,246,246}
+\definecolor{rulegray}{RGB}{80,80,80}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=accent,
+  urlcolor=accent,
+  pdftitle={Held --- Graph Hacks build spec},
+  pdfauthor={Hachemi Abdelaziz}
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\textcolor{rulegray}{Held --- Graph Hacks}}
+\fancyhead[R]{\small\textcolor{rulegray}{\thepage}}
+\renewcommand{\headrulewidth}{0.3pt}
+\setlist[itemize]{nosep,leftmargin=1.4em}
+\setlist[enumerate]{nosep,leftmargin=1.6em}
+
+\lstset{
+  basicstyle=\ttfamily\small,
+  backgroundcolor=\color{codebg},
+  breaklines=true,
+  columns=fullflexible,
+  frame=single,
+  framerule=0pt,
+  xleftmargin=0.6em,
+  framexleftmargin=0.4em,
+  aboveskip=0.8em,
+  belowskip=0.8em,
+  showstringspaces=false
+}
+
+\newcommand{\code}[1]{\texttt{#1}}
+\newcommand{\file}[1]{\texttt{#1}}
+
+\title{%
+  \textbf{Held}\\[0.4em]
+  \large Build spec for Graph Hacks: Context for AI Agents\\[0.3em]
+  \normalsize FalkorDB $\cdot$ WeMakeDevs $\cdot$ 15--18 October 2026
+}
+\author{Hachemi Abdelaziz}
+\date{Notes written 9 October 2026. Code starts 14 October 2026, 19:31 (UTC+1).}
+
+\begin{document}
+\maketitle
+\begin{center}
+\small
+This file is a hackathon plan. It is not a DevLearnOps feature.\\
+Do not deploy it on the production VPS. Do not update the company context file.
+\end{center}
+
+\tableofcontents
+\vspace{1em}
+
+\begin{quote}
+\textbf{Not for treatment.}
+Held is a synthetic demo. The patients are fictional.
+The page must say that a clinician, not this software, decides what a real person takes.
+Do not load a real medication list. Do not give doses. Do not build drug discovery, a lab protocol, or anything that makes a substance.
+\end{quote}
+
+\section{What this document is for}
+
+On the first night of the hackathon, open this PDF and build only what it names.
+The product is one scene. The scene is the entry.
+
+A ward agent records that ibuprofen must be held for Patient~A, because a kidney finding and a public label say so.
+The chat is cleared.
+A pharmacy agent, in a new session, tries to restart ibuprofen.
+FalkorDB blocks the restart and returns the path: order, hold, finding, label, prescriber, admission, policy.
+Patient~B has a headache and no hold. The same restart is allowed. Patient~B is a different FalkorDB graph.
+
+That is Held. An agent here is a function with tools. It reads the graph, takes one action, and writes the result back. It is not a personality and it is not a chatbot that happens to sit near a drawing of a graph.
+
+\subsection{What a win is}
+
+The event lists a \$20{,}000 prize pool for every prize together.
+Track~2 pays a PS5 with GTA~VI to each member of the one winning team.
+Track~1 pays an iPhone~18 Pro. Track~3 pays an M6 Mac Mini.
+A blog post pays AirPods~5. The top 50 submissions get a t-shirt.
+There is no cash grand prize above the tracks.
+
+As of 9 October 2026 the public pages did not show a registrant count.
+A planning judgment, not a measurement: if the three beats below are live and obvious in the video, the chance at the PS5 is on the order of a few percent.
+If the demo looks like ``these drugs interact,'' the chance is about zero.
+The top-50 t-shirt is the result that finishing can realistically reach.
+This document does not raise that judgment. Adding frameworks does not raise it either.
+
+Ship the public repo either way. A hiring person can open the repo and the video if the prize goes to someone else.
+The prize is one rank. The repo is the career artifact you control.
+
+\subsection{Clock}
+
+Times are Algeria (UTC+1). India Standard Time is UTC+5:30.
+
+\begin{center}
+\begin{tabular}{@{}llp{7.2cm}@{}}
+\toprule
+\textbf{When} & \textbf{IST} & \textbf{What} \\
+\midrule
+Now until 14 Oct, 19:31 & before 15 Oct, 00:01 & Read, draw, run one hello query. Do not write the app. \\
+14 Oct, 19:31 & 15 Oct, 00:01 & Hacking starts. Create the repo. \\
+18 Oct, 19:29 & 18 Oct, 23:59 & Submissions close. \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Re-read the rules that morning. The event page says the rules can change:\\
+\url{https://www.wemakedevs.org/hackathons/falkordb/rules}
+
+\section{The official brief, and where Held meets it}
+
+The challenge page says the graph has to shape what the agent does, not sit on the side.
+If \code{proposeOrder} still returns the right allow or block while FalkorDB is stopped, the entry fails.
+
+\begin{center}
+\begin{tabularx}{\textwidth}{@{}lX@{}}
+\toprule
+\textbf{The site asks} & \textbf{Where it lives in Held} \\
+\midrule
+Follow connections across data &
+\code{blockPath} walks order, drug, hold, finding, label, person, admission, and policy. \\
+Remember across sessions &
+The hold is still in the graph after the chat is cleared. \code{Attempt} nodes keep the history. \\
+Share state between agents &
+The ward agent writes the hold. The pharmacy agent reads it. They do not pass a transcript. A \code{HANDOFF} edge records the hand. \\
+Connect people, projects, and decisions &
+The prescriber and the pharmacist are people. The admission is the piece of work. The policy is the decision: a hold outlives the shift. \\
+Show the path behind an answer &
+The page prints the rows of \code{blockPath}. The video shows those rows. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+The brief's three verbs are the same scene. The pharmacy agent \emph{acts} by allowing or blocking the restart. It \emph{remembers} because the hold survives the empty chat. It \emph{shows how} because the path is the reason on screen.
+
+Track~2 on the event page also asks for episodic, semantic, and procedural memory, history, handoffs, concurrent reads and writes, and separate memory per tenant. Section~\ref{sec:memory} maps each of those words onto a node or an edge.
+
+\begin{center}
+\begin{tabularx}{\textwidth}{@{}lXl@{}}
+\toprule
+\textbf{Track} & \textbf{What the judge sees} & \textbf{Prize} \\
+\midrule
+1. Agents that act &
+The restart is allowed or blocked because \code{blockPath} returned rows. &
+iPhone 18 Pro \\
+2. Memory and coordination &
+New session, other agent, hold still in force, other patient isolated. &
+PS5 with GTA VI \\
+3. Company brain &
+Who ordered, which admission, which policy, which label. &
+M6 Mac Mini \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+Enter all three tracks with this one repo. The video spends most of its time on the block in the new session. That is the PS5 scene. Tracks~1 and~3 are in the same path. They are not a second product.
+
+\section{Architecture}
+
+One Node process. One FalkorDB. Two graph names. No other database.
+
+\begin{center}
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{Piece} & \textbf{Role} \\
+\midrule
+\file{public/index.html} & Buttons and the path text. No framework. \\
+\file{src/server.ts} & HTTP. Maps a patient id to a graph name. \\
+\file{src/mcp.ts} & Same four tools, exposed as MCP. \\
+\file{src/agents.ts} & Ward agent and pharmacy agent. They call tools only. \\
+\file{src/graph.ts} & Every Cypher query and every write. \\
+\file{src/seed.ts} & Synthetic patients. No hold on Patient~A yet. \\
+\file{src/check.ts} & The script that must pass. \\
+FalkorDB & Graphs \code{held\_a} and \code{held\_b}. \\
+Narrator, optional & One model call that reads rows and writes one sentence. \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The page and the MCP server both call \file{src/graph.ts}.
+There is one decision. The decision is \code{proposeOrder}.
+A model may narrate the rows. A model must not choose allow or block.
+If the model is down, the block still happens.
+
+\begin{quote}
+\textbf{Ceiling.}
+Two graphs and two parallel requests are the whole concurrency story.
+That is enough to show the track~2 line about concurrent reads and writes on a demo.
+A connection pool, a queue, and a load test are out. Upgrade only if a judge asks and Sunday morning is already shipped.
+\end{quote}
+
+\subsection{Request path}
+
+\begin{enumerate}
+  \item The page sends a pharmacy request for Patient~A, with a session id and the drug id \code{ibuprofen}.
+  \item \file{src/server.ts} maps \code{patient\_a} to graph \code{held\_a}. Any other patient id returns 404 and creates no graph.
+  \item \code{proposeOrder} runs \code{blockPath}.
+  \item If the path has a row, the function writes an \code{Attempt} with result \code{blocked} and does not create an order. It writes a \code{HANDOFF} from the pharmacy agent to the ward agent.
+  \item If the path has no row, the function creates an \code{Order} with status \code{active} and an \code{Attempt} with result \code{allowed}.
+  \item The response is the decision plus the rows. The page prints them.
+\end{enumerate}
+
+Stopping FalkorDB must make \code{GET /health} return 503 and \code{proposeOrder} throw.
+There is no in-memory fallback graph.
+
+\section{Technologies}
+
+Use the official client and the current docs. If this PDF and the docs disagree on a function name, the docs win.
+Read these on the first hour, before writing a call:
+
+\begin{itemize}
+  \item \url{https://docs.falkordb.com/commands/graph.query.html}
+  \item \url{https://docs.falkordb.com/cypher/cypher-support}
+  \item \url{https://docs.falkordb.com/getting-started/clients}
+  \item \url{https://docs.falkordb.com/algorithms/}
+  \item the \code{falkordb} npm README
+  \item the current TypeScript MCP quickstart, for the package name and the server boilerplate
+\end{itemize}
+
+\begin{center}
+\begin{tabularx}{\textwidth}{@{}lX@{}}
+\toprule
+\textbf{Use} & \textbf{Why it is here} \\
+\midrule
+Docker image \code{falkordb/falkordb:latest} &
+The database. Copy ports from the current getting-started page. Do not guess 3000 or 6379 if that page names different ones. \\
+Node 22 and TypeScript &
+You can explain it. One process serves HTTP, MCP, and the page. \\
+npm package \code{falkordb} (\code{falkordb-ts}) &
+Official client. It issues \code{GRAPH.QUERY}. Parameterized queries only. \\
+MCP TypeScript SDK &
+The hackathon lists MCP. Four tools, same functions as HTTP. \\
+openFDA drug label API &
+Copy one short public sentence into the \code{Label} node during the event. Store the URL. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{center}
+\begin{tabularx}{\textwidth}{@{}lX@{}}
+\toprule
+\textbf{Do not use} & \textbf{Why} \\
+\midrule
+LangChain, LlamaIndex, a vector database &
+The decision must be Cypher. A second store lets the demo survive with FalkorDB turned off. \\
+A Neo4j driver &
+FalkorDB is not Neo4j. No regex operator. No label expressions such as \code{(n:A|B)}. \\
+GraphRAG SDK, an ORM, Graphiti-as-the-product &
+They hide the query you have to read aloud. \\
+The DevLearnOps VPS, Kong, GHCR, Cloudflare, k3s &
+This product is a new repo on a new host. \\
+A real patient's data &
+The rules forbid private personal data. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+Graphiti is the production version of temporal memory, and FalkorDB documents it.
+Do not start there. After \code{npm run check} passes and the video is recorded, a stretch goal is to also store the ward note as a Graphiti episode.
+Skip that stretch if it threatens the deadline. The block stays in \file{src/graph.ts}.
+
+\paragraph{Hybrid retrieval.}
+The 2026 form of RAG is a search that finds a node, then a traversal that decides.
+Held does not need the search. The drug id is known. The traversal decides.
+Do not add an embedding to look impressive.
+
+\section{Repository}
+
+Create this on 14 October, after 19:31. Not before.
+
+\begin{lstlisting}
+held/
+  package.json
+  tsconfig.json
+  docker-compose.yml
+  README.md
+  src/server.ts
+  src/mcp.ts
+  src/agents.ts
+  src/graph.ts
+  src/seed.ts
+  src/check.ts
+  public/index.html
+\end{lstlisting}
+
+\file{package.json} scripts: \code{dev}, \code{seed}, \code{check}, \code{start}.
+License MIT. The README says the FalkorDB implementation was written during Graph Hacks.
+
+\section{Graph model}
+\label{sec:memory}
+
+Two graphs. Same schema. No shared nodes. Isolation is the graph name passed to \code{GRAPH.QUERY}, not a \code{tenant\_id} filter. A filter bug would leak a hold. A second graph cannot.
+
+\begin{center}
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Graph} & \textbf{Patient} & \textbf{Hold at seed time} \\
+\midrule
+\code{held\_a} & \code{patient\_a} & none \\
+\code{held\_b} & \code{patient\_b} & none \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Store times as epoch milliseconds. FalkorDB's temporal arithmetic functions are unsupported, so do not do datetime math in Cypher.
+
+\subsection{Labels}
+
+\begin{center}
+\begin{tabularx}{\textwidth}{@{}lXX@{}}
+\toprule
+\textbf{Label} & \textbf{Properties} & \textbf{Seed} \\
+\midrule
+\code{:Patient} & \code{id}, \code{name} &
+A: \code{patient\_a}, ``Patient A''. B: \code{patient\_b}, ``Patient B''. \\
+\code{:Admission} & \code{id}, \code{title} &
+\code{adm\_a} ``Night admission''. \code{adm\_b} ``Night admission''. This node is the project. \\
+\code{:Person} & \code{id}, \code{name}, \code{role} &
+\code{mina} Mina Cole, prescriber. \code{rafi} Rafi Duran, pharmacist. Fictional. Same ids in both graphs. \\
+\code{:Agent} & \code{id} &
+\code{ward} and \code{pharmacy}. \\
+\code{:Drug} & \code{id}, \code{name} &
+\code{ibuprofen}, Ibuprofen. \\
+\code{:Order} & \code{id}, \code{status}, \code{at} &
+On A only, at seed: one \code{active} order for ibuprofen, written by Mina. B has no order yet. \\
+\code{:Finding} & \code{id}, \code{kind}, \code{at} &
+None on A at seed. The ward agent creates \code{kidney\_impairment}. B's seed includes \code{headache} and no hold. \\
+\code{:Hold} & \code{id}, \code{valid\_at}, \code{invalid\_at} &
+Created only by the ward agent. \code{invalid\_at} stays null. Null means the hold is in force. \\
+\code{:Label} & \code{id}, \code{url}, \code{sentence} &
+\code{ibuprofen\_renal}. URL and sentence copied from openFDA on day~1. \\
+\code{:Policy} & \code{id}, \code{text} &
+\code{hold\_survives\_shift}. Text: ``A hold stays in force across sessions until a clinician clears it.'' \\
+\code{:Attempt} & \code{id}, \code{at}, \code{session} &
+Created by \code{proposeOrder}. This is the history. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\subsection{Edges}
+
+\begin{center}
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{Edge} & \textbf{Meaning} \\
+\midrule
+\code{(Patient)-[:HAS]->(Admission)} & The case belongs to the patient. \\
+\code{(Person)-[:OWNS]->(Admission)} & Mina owns the admission. \\
+\code{(Person)-[:ORDERED]->(Order)} & Mina wrote the original order on A. \\
+\code{(Order)-[:OF]->(Drug)} & The order is for ibuprofen. \\
+\code{(Order)-[:DURING]->(Admission)} & The order is part of the case. \\
+\code{(Finding)-[:ON]->(Admission)} & The finding is about this case. \\
+\code{(Agent)-[:RECORDED]->(Finding)} & The ward agent wrote it. \\
+\code{(Hold)-[:BLOCKS]->(Drug)} & Procedural memory: do not restart this drug. \\
+\code{(Hold)-[:BECAUSE]->(Finding)} & Why the hold exists. \\
+\code{(Hold)-[:CITES]->(Label)} & The public source. \\
+\code{(Hold)-[:UNDER]->(Policy)} & The decision the hold carries out. \\
+\code{(Agent)-[:WROTE]->(Hold)} & The ward agent wrote the hold. \\
+\code{(Attempt)-[:TRIED]->(Drug)} & Properties: \code{result}, \code{at}. Result is \code{blocked} or \code{allowed}. \\
+\code{(Agent)-[:HANDOFF]->(Agent)} & Properties: \code{at}, \code{reason}, \code{attempt\_id}. \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{The three memories}
+\label{sec:memorymap}
+
+\begin{center}
+\begin{tabularx}{\textwidth}{@{}lX@{}}
+\toprule
+\textbf{Word on the track page} & \textbf{Node or edge} \\
+\midrule
+Episodic & \code{:Attempt} and \code{:Finding}, with \code{at}. \\
+Semantic & \code{:Drug}, \code{:Label}, \code{:Person}, \code{:Admission}, \code{:Policy}. \\
+Procedural & \code{:Hold} whose \code{invalid\_at} is null. Meaning: do not restart. \\
+Persistent history & Attempts remain after the page session id changes. \\
+Shared state & The pharmacy agent reads the hold the ward agent wrote. \code{HANDOFF} is the evidence in Browser. \\
+Separate tenant & \code{held\_a} and \code{held\_b}. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+Headache does not create a hold. The only finding kind that creates a hold is \code{kidney\_impairment}, and only because the seed linked that kind to the label node. The agent does not diagnose.
+
+\section{Queries}
+
+Drafts. Run each one in FalkorDB Browser before \file{src/graph.ts} calls it.
+\code{WHERE} after \code{OPTIONAL MATCH} is easy to get wrong, so the block query counts the hold instead.
+
+\subsection{\code{blockPath}}
+
+\begin{lstlisting}
+MATCH (d:Drug {id: $drug})<-[:BLOCKS]-(h:Hold)
+WHERE h.invalid_at IS NULL
+MATCH (h)-[:BECAUSE]->(f:Finding)
+MATCH (h)-[:CITES]->(l:Label)
+MATCH (h)-[:UNDER]->(p:Policy)
+MATCH (f)-[:ON]->(adm:Admission)<-[:OWNS]-(prescriber:Person {role: 'prescriber'})
+RETURN d.name AS drug,
+       h.id AS hold,
+       f.kind AS finding,
+       l.sentence AS label,
+       l.url AS url,
+       p.text AS policy,
+       prescriber.name AS prescriber,
+       adm.id AS admission
+\end{lstlisting}
+
+No rows means allow. One row means block. The page prints every returned field. That printout is ``show the path.''
+
+\subsection{\code{recordFinding}}
+
+For \code{kind = kidney\_impairment} on \code{held\_a}, in one query batch:
+
+\begin{enumerate}
+  \item Create the finding. Link the ward agent to it with \code{RECORDED}. Link the finding to the admission with \code{ON}.
+  \item Create the hold. Set \code{valid\_at} to now. Leave \code{invalid\_at} null.
+  \item Add \code{BLOCKS}, \code{BECAUSE}, \code{CITES}, and \code{UNDER}. Link the ward agent to the hold with \code{WROTE}.
+  \item Add a \code{HANDOFF} from the ward agent to the pharmacy agent. Reason: ``Hold written. Pharmacy must read it before a restart.''
+\end{enumerate}
+
+For \code{headache}, create the finding only. Do not create a hold.
+Unknown \code{kind}: write nothing and return an error.
+
+\subsection{\code{proposeOrder}}
+
+\begin{enumerate}
+  \item Run \code{blockPath}.
+  \item Create an \code{Attempt} and \code{(attempt)-[:TRIED \{result, at\}]->(drug)}.
+  \item On \code{blocked}, do not create an \code{Order}.
+  \item On \code{allowed}, create an active order. The pharmacist \code{ORDERED} it, the order is \code{OF} the drug, and it happened \code{DURING} the admission.
+  \item Create \code{(pharmacy)-[:HANDOFF]->(ward)} with the attempt id.
+\end{enumerate}
+
+The drug id comes from the button, which only sends \code{ibuprofen}. Reject any other drug id with 400 and write nothing.
+
+\subsection{Concurrency check}
+
+After the hold exists, fire two \code{proposeOrder} calls on \code{held\_a} without waiting between them.
+Both results must be \code{blocked}. Both must have written an \code{Attempt}.
+Neither may create an \code{Order}. Put this in \file{src/check.ts}.
+
+\section{Agents and MCP tools}
+
+\file{src/agents.ts} has two functions.
+
+\begin{center}
+\begin{tabularx}{\textwidth}{@{}lXX@{}}
+\toprule
+\textbf{Agent} & \textbf{Tool} & \textbf{Write} \\
+\midrule
+Ward & \code{record\_finding} & Finding, and a hold when the kind is \code{kidney\_impairment}. \\
+Pharmacy & \code{propose\_order} & Attempt, handoff, and an order only when the path is empty. \\
+Either & \code{why} & Read only. Returns \code{blockPath}. \\
+Either & \code{health} & Read only. Runs \code{RETURN 1}. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+The MCP server exposes those four tools. Tool descriptions say they read or write FalkorDB. The HTTP routes call the same functions, so the demo does not depend on an MCP client being installed on the judge's laptop. The README shows one \code{tools/list} dump so the MCP surface is visible.
+
+If the official SDK's boilerplate takes more than 90 minutes, ship HTTP first and add MCP only after \code{npm run check} is green. Do not invent a second decision path to save time.
+
+A union \code{'allow' | 'block'} needs a \code{never} check in the default branch, so a third state fails the TypeScript build.
+
+\section{Page and HTTP}
+
+\begin{center}
+\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{6.6cm}Xp{3.4cm}@{}}
+\toprule
+\textbf{Call} & \textbf{Body} & \textbf{Result} \\
+\midrule
+POST patient A, ward &
+kind \code{kidney\_impairment} &
+The new hold id. \\
+POST patient A, pharmacy &
+session id and drug \code{ibuprofen} &
+\code{decision} and \code{rows}. \\
+POST patient B, pharmacy &
+same body &
+\code{allowed}. \\
+GET \code{/health} &
+none &
+200, or 503 if the query fails. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+One \file{public/index.html}. Controls: Patient~A, Patient~B, ``Record kidney finding,'' ``Restart ibuprofen,'' and a \code{pre} that prints the JSON. A banner at the top: ``Synthetic demo. Not for treatment.''
+No login. No second page. No graph drawing library. The JSON path is the picture. Add a drawing only after the video is recorded.
+
+\section{The check}
+
+\code{npm run check} is one Node script. No test framework. Exit code 0 only when every step holds.
+
+\begin{enumerate}
+  \item Delete graphs \code{held\_a} and \code{held\_b} if they exist, then seed them.
+  \item \code{proposeOrder('held\_a', ibuprofen)} returns \code{allowed}. Seed has an order already. This call is a second allow, before any hold.
+  \item \code{recordFinding('held\_a', kidney\_impairment)} creates a hold with \code{invalid\_at} null.
+  \item \code{proposeOrder('held\_a', ibuprofen)} returns \code{blocked}. The rows include Mina Cole, the policy text, and the label sentence. No new \code{Order} is created by this call.
+  \item Two parallel proposes on \code{held\_a} both return \code{blocked}.
+  \item \code{proposeOrder('held\_b', ibuprofen)} returns \code{allowed}.
+  \item A query for a hold on \code{held\_b} returns no rows.
+\end{enumerate}
+
+If step~4 passes while Docker is stopped, delete the fallback. The last manual step, written in the README, is: stop FalkorDB, \code{GET /health} returns 503, start it, the block works again.
+
+\section{Build order}
+
+Each step ends with something you can see. Do not start the next step early.
+
+\subsection{Before 14 October, 19:31}
+
+\begin{enumerate}
+  \item Register on the hackathon page. Join the FalkorDB Discord.
+  \item \code{docker pull falkordb/falkordb:latest}. Start it with the ports from the current docs. Open FalkorDB Browser.
+  \item Type one query yourself: two nodes, one relationship, then \code{MATCH} them.
+  \item Draw the labels from Section~\ref{sec:memory} on paper.
+  \item Open openFDA and find the ibuprofen label. Copy one sentence that mentions kidney or renal impairment, plus the URL, into a note. If that sentence is not on the current label, pick the warning sentence that is, and keep the finding kind matched to that sentence. Do not invent the sentence.
+  \item Read the shot list aloud. Time it.
+  \item Choose a new host for the live URL. Not the DevLearnOps machine.
+\end{enumerate}
+
+Do not create the GitHub repo. Do not write TypeScript. Do not scaffold.
+
+\subsection{After the window opens}
+
+\begin{enumerate}
+  \item Create the public repo \code{held}.
+  \item Compose for FalkorDB only. Browser opens.
+  \item Write \code{npm run check} so it fails on a missing graph.
+  \item Seed and queries until the check passes. Paste the final Cypher into the README the same day.
+  \item HTTP routes from the table above.
+  \item The one page. Click Patient~A, record the finding, restart, see \code{blocked} and the rows. Switch to Patient~B, restart, see \code{allowed}.
+  \item MCP \code{tools/list} showing the same four tools.
+  \item Parallel block check from the check script.
+  \item Deploy the same Compose stack. \code{GET /health} on the live URL.
+  \item Record the video. Write the blog. Submit tracks 1, 2, and 3, and the blog URL.
+\end{enumerate}
+
+If Sunday afternoon comes and deploy is shaky, stop features. A live block beats a Graphiti episode.
+
+\section{Shot list}
+
+Say these words while the screen shows the action.
+
+\begin{enumerate}
+  \item ``Patient~A is already on ibuprofen. Nothing is held.'' Show the allow, or the seeded active order, and an empty hold query.
+  \item ``The ward agent records the kidney finding. The hold cites the public label and the policy that a hold survives the shift.'' Click the ward button. Show the new edges in Browser.
+  \item ``New session. Empty chat. The pharmacy agent tries to restart ibuprofen.'' Click restart. The page shows \code{blocked} and the rows: Mina Cole, the finding, the label sentence, the policy.
+  \item ``Patient~B is a different graph. A headache does not copy A's hold.'' Switch patient. Click restart. The page shows \code{allowed}.
+  \item ``Stop the database and this button cannot decide.'' Stop FalkorDB if the recording setup allows it. Otherwise cut in the README kill test as a still.
+\end{enumerate}
+
+Keep it under three minutes. Cut any sentence that is not one of those five beats.
+
+\section{README, blog, submission}
+
+The README has these sections, in this order:
+
+\begin{enumerate}
+  \item The three beats, in plain sentences.
+  \item Docker and npm commands copied from what you ran.
+  \item The graph model, updated if a property changed.
+  \item The final Cypher, pasted from \file{src/graph.ts}.
+  \item The live URL, or the local commands and the video file name.
+  \item Tracks entered: 1, 2, and 3.
+  \item AI disclosure: name the tools, and state that \code{proposeOrder} is deterministic Cypher.
+  \item The kill test.
+  \item The not-for-treatment line.
+\end{enumerate}
+
+Blog title: ``The next shift was not allowed to restart ibuprofen.''
+Publish on a site you already control. Cover the empty chat, the hold edge, Patient~B, the query, and the 503. Two hours maximum. Submit the URL for the AirPods side prize.
+
+Submission packet: public repo, live URL, video under three minutes, blog URL, all three tracks named, sent before 18 October 2026, 19:29 (UTC+1).
+
+\section{Skills, plugins, and rules for the coding session}
+
+Load a skill only when that step starts. Do not open the skill catalog. Do not load marketing, ISO, payments, Strix, or Lemon Squeezy. This product does not take money.
+
+\begin{center}
+\begin{tabularx}{\textwidth}{@{}lX@{}}
+\toprule
+\textbf{When} & \textbf{What to open} \\
+\midrule
+Any code &
+Ponytail, already on in \file{.cursor/rules/ponytail.mdc}. The smallest code that makes \code{npm run check} pass. \\
+Before a FalkorDB call &
+The current page on \url{https://docs.falkordb.com} for that call. \\
+Docker will not start &
+The \code{docker-development} skill, then return to this PDF. \\
+The page exists &
+Prove the beats in the browser. Click ward, pharmacy, and the patient switch. A screenshot is not proof. Use the Cursor browser tools for that proof only. \\
+Before you say it is done &
+The \code{verification-loop} skill: the check output, the live URL, and the video file. \\
+README and the blog &
+Technical writing. Short sentences. Paste the real queries. \\
+A TypeScript union &
+The workspace rule for an exhaustive switch. \code{allow} and \code{block} only. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+Plugins: the Cursor browser is for the proof. Do not build Held as a Cursor chat memory, a Gmail demo, or an X demo. Do not call the Upwork plugin.
+
+Rules that bind the coding session:
+
+\begin{enumerate}
+  \item Hackathon rules at the URL in the clock section. FalkorDB is load-bearing. New application code starts after 14 October 2026, 19:31 (UTC+1). AI use is disclosed. You can explain the model without this PDF.
+  \item Ponytail. No new dependency if the official \code{falkordb} package and the MCP SDK already cover it.
+  \item Imports at the top of the file.
+  \item Company context: read it only to avoid the production cluster. Do not edit the company context file. This hackathon is not the monthly rock.
+  \item Synthetic data only. The not-for-treatment banner stays.
+  \item Do not commit secrets. No API keys in the repo. The narrator key, if any, stays in an uncommitted env file.
+\end{enumerate}
+
+\subsection{First message for the coding chat}
+
+Paste this after 19:31 on 14 October:
+
+\begin{quote}
+\small
+Build Held from \file{hackathon/held/held.pdf}.
+The lab spec in \file{hackathon/second-shift/} is retired.
+Do not touch DevLearnOps production.
+Start at the failing \code{npm run check}, then the queries in the PDF.
+The pharmacy agent blocks only when \code{blockPath} returns a row.
+Patient~B must still allow ibuprofen.
+Stop when the check passes, the three beats work in the browser, and the live URL returns 503 with FalkorDB down.
+\end{quote}
+
+\section{What will get the entry thrown out}
+
+\begin{itemize}
+  \item The product still decides after FalkorDB is stopped.
+  \item The graph is a picture of data that actually lives in Postgres, a JSON file, or the chat log.
+  \item Application code was committed before 14 October 2026, 19:31 (UTC+1). Notes and this PDF are allowed. The repo is not.
+  \item Private, login-gated, or real patient data.
+  \item You cannot explain the labels, the edges, and why the restart was blocked.
+  \item The project is only generated output, with no check you ran.
+  \item A second product stuffed in to chase the iPhone and the Mac Mini.
+  \item A medical claim. Held blocks a synthetic order in a demo. It does not treat anyone.
+\end{itemize}
+
+\section{Source pages, fetched 9 October 2026}
+
+\begin{itemize}
+  \item \url{https://www.wemakedevs.org/hackathons/falkordb}
+  \item \url{https://www.wemakedevs.org/hackathons/falkordb/rules}
+  \item \url{https://www.wemakedevs.org/hackathons/falkordb/resources}
+  \item \url{https://docs.falkordb.com/agentic-memory/graphiti}
+  \item \url{https://www.falkordb.com/blog/graphiti-falkordb-multi-agent-performance/}
+  \item \url{https://www.who.int/publications/i/item/WHO-UHC-SDS-2019.9}
+  \item \url{https://open.fda.gov/}
+\end{itemize}
+
+The WHO page is why the scene is a shift change. It is not permission to build a clinical system.
+openFDA is the place to copy the one label sentence. SIDEKICK and other full drug graphs are out of scope for these four days.
+
+\end{document}
