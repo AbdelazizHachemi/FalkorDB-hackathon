@@ -1,10 +1,12 @@
-# Held — Graph Hacks: Context for AI Agents
+# Held — Graph-backed handoffs for AI agents
 
-**A multi-agent handoff that remembers its reason after the chat is gone.**
+**When one agent hands off a decision, the next agent should inherit the evidence—not just a chat transcript.**
 
-Built for [Graph Hacks: Context for AI Agents](https://www.wemakedevs.org/hackathons/falkordb), powered by FalkorDB.
+Held is a synthetic multi-agent handoff demo built for [Graph Hacks: Context for AI Agents](https://www.wemakedevs.org/hackathons/falkordb), powered by FalkorDB. A ward agent records a hold in the graph; a pharmacy agent in a fresh session retrieves the connected reason before a restart can be allowed.
 
 > **Live demo:** [throw-winston-beneficial-partner.trycloudflare.com](https://throw-winston-beneficial-partner.trycloudflare.com)
+>
+> **Demo video:** [Watch the hackathon walkthrough](https://youtu.be/sWFOinI4W1c)
 >
 > **Safety:** Synthetic demo only. Not for treatment. A clinician decides what a real person takes.
 
@@ -31,41 +33,9 @@ Open <http://localhost:8787>. To reset the synthetic graphs separately, run `npm
 
 For a production-style local stack, `docker compose up -d --build` also starts the app and a Cloudflare Quick Tunnel. Read “Deploy on a VPS” first; the tunnel URL is temporary.
 
-## Walk-through and video
+## Video and live demo
 
-The live demo is a [temporary Cloudflare Quick Tunnel](https://throw-winston-beneficial-partner.trycloudflare.com). It is up at the time this README was updated; Quick Tunnel URLs can change or stop working. Check the URL before submitting.
-
-### Record the demo
-
-Record a single browser window and your narration. Keep it under three minutes. Before recording, reset only the synthetic demo graphs on the VPS so the first Patient A restart is allowed:
-
-```bash
-ssh -i ~/.ssh/id_ed25519_falkordb_hackathon_vps USER@VPS_IP
-cd FalkorDB-hackathon
-docker compose run --rm app npm run seed
-```
-
-This intentionally resets both demo graphs. Reload the live page before recording and confirm it responds. Show the full browser window and click these controls in order: **Patient A → Restart ibuprofen → Record kidney finding → Restart ibuprofen → Patient B → Restart ibuprofen**. The second restart on A should be blocked; B should be allowed. Avoid showing terminals with credentials, private keys, or other personal information.
-
-### Suggested narration (about 90 seconds)
-
-> “This is Held, my entry for Graph Hacks: Context for AI Agents, powered by FalkorDB. It demonstrates an agent handoff where the graph—not a copied chat transcript—carries the reason for a decision.”
->
-> “Patient A is synthetic. Nothing is held yet, so the pharmacy agent can propose an ibuprofen restart.”
->
-> “Now the ward agent records a synthetic kidney finding. That writes a hold connected to the finding, an openFDA label, the admission, the prescriber, and the policy.”
->
-> “I’m starting a new pharmacy session. The chat is empty, but FalkorDB still has the hold. The graph query returns the path behind it, so the restart is blocked. You can see the finding, cited label, prescriber, admission, and policy in the result.”
->
-> “Patient B is stored in a different FalkorDB graph. B has a headache and no hold, so the same proposed restart is allowed. Patient A’s hold did not cross into B’s graph.”
->
-> “The decision is deterministic Cypher, not a model-generated medical recommendation. This is fictional demo data, not for treatment; a clinician makes real care decisions.”
-
-### Where to host the recording
-
-Recommended: upload the video to **YouTube as Unlisted**, then open the link in a private/incognito window to confirm judges can view it without signing in. Unlisted means anyone with the link can watch, so don’t show secrets or personal information. Loom or another host with a publicly accessible link is also fine. Put the final video URL in the hackathon submission and replace the “Video” line below.
-
-- **Video:** Not recorded yet.
+Watch the [hackathon walkthrough](https://youtu.be/sWFOinI4W1c), then try the [live demo](https://throw-winston-beneficial-partner.trycloudflare.com). The live app uses a temporary Cloudflare Quick Tunnel, so its URL may change or stop working; the video and source remain useful if it is offline. Make sure the video is viewable by judges without signing in.
 
 ## How it works
 
@@ -113,5 +83,6 @@ docker compose logs -f app cloudflared falkordb
 ## Project links
 
 - [Live demo](https://throw-winston-beneficial-partner.trycloudflare.com)
+- [Demo video](https://youtu.be/sWFOinI4W1c)
 - [Graph Hacks: Context for AI Agents](https://www.wemakedevs.org/hackathons/falkordb)
 - [Build story draft](./BLOG.md)

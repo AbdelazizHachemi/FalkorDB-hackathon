@@ -4,7 +4,7 @@
 
 **Held is a synthetic multi-agent handoff demo. A ward agent records a hold in FalkorDB; a pharmacy agent, in a new session, has to discover the reason before it can propose a restart.**
 
-[Try the live demo](https://throw-winston-beneficial-partner.trycloudflare.com) · [View the source](https://github.com/AbdelazizHachemi/FalkorDB-hackathon)
+[Watch the demo](https://youtu.be/sWFOinI4W1c) · [Try the live demo](https://throw-winston-beneficial-partner.trycloudflare.com) · [View the source](https://github.com/AbdelazizHachemi/FalkorDB-hackathon)
 
 ## The challenge I chose
 
@@ -61,6 +61,6 @@ The limits matter. This is a hackathon-scale synthetic demonstration, not a medi
 - **Live demo:** [Held on Cloudflare Quick Tunnel](https://throw-winston-beneficial-partner.trycloudflare.com)
 - **Source:** [AbdelazizHachemi/FalkorDB-hackathon](https://github.com/AbdelazizHachemi/FalkorDB-hackathon)
 - **Event:** [Graph Hacks: Context for AI Agents](https://www.wemakedevs.org/hackathons/falkordb)
-- **Demo video:** add the public or unlisted video URL here after recording.
+- **Demo video:** [Watch the hackathon walkthrough](https://youtu.be/sWFOinI4W1c)
 
 Cursor with Grok assisted in producing the repository from the Held build specification. I reviewed the project and remain responsible for explaining it. The decision is deterministic Cypher; a model does not choose whether to allow or block.
