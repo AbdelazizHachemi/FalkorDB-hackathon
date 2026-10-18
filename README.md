@@ -46,6 +46,35 @@ Watch the [hackathon walkthrough](https://youtu.be/sWFOinI4W1c), then try the [l
 - `src/seed.ts` creates two independent synthetic graphs, `held_a` and `held_b`.
 - `src/check.ts` checks the central story, including parallel requests after the hold exists.
 
+### Graph data model
+
+Each synthetic patient has a separate FalkorDB graph (`held_a` or `held_b`). Both graphs model `Patient`, `Admission`, `Person`, `Agent`, `Drug`, `Label`, and `Policy` nodes; the demo adds `Finding`, `Hold`, `Attempt`, and `Order` nodes as the scenario runs.
+
+Key relationships are `Patient-[:HAS]->Admission`, `Person-[:OWNS]->Admission`, `Agent-[:RECORDED]->Finding-[:ON]->Admission`, and `Hold-[:BLOCKS]->Drug`. A hold also connects to its evidence and governing context through `Hold-[:BECAUSE]->Finding`, `Hold-[:CITES]->Label`, and `Hold-[:UNDER]->Policy`. `Agent-[:HANDOFF]->Agent` records the agent transition. Attempts connect to drugs with `Attempt-[:TRIED]->Drug`; allowed proposals additionally create `Person-[:ORDERED]->Order-[:OF]->Drug` and `Order-[:DURING]->Admission`.
+
+### Cypher decision query
+
+`blockPath` in `src/graph.ts` searches for an active hold and returns the evidence chain used to explain a blocked proposal. The `$drug` value is passed as a query parameter:
+
+```cypher
+MATCH (d:Drug {id: $drug})<-[:BLOCKS]-(h:Hold)
+WHERE h.invalid_at IS NULL
+MATCH (h)-[:BECAUSE]->(f:Finding)
+MATCH (h)-[:CITES]->(l:Label)
+MATCH (h)-[:UNDER]->(p:Policy)
+MATCH (f)-[:ON]->(adm:Admission)<-[:OWNS]-(prescriber:Person {role: 'prescriber'})
+RETURN d.name AS drug,
+       h.id AS hold,
+       f.kind AS finding,
+       l.sentence AS label,
+       l.url AS url,
+       p.text AS policy,
+       prescriber.name AS prescriber,
+       adm.id AS admission
+```
+
+`proposeOrder` blocks when this query returns a row; otherwise it allows the proposal. `recordFinding` writes the finding and hold, and `proposeOrder` writes the attempt and—only when allowed—the order. See `src/graph.ts` for the parameterized write queries.
+
 The decision is intentionally narrow: `proposeOrder` allows only when `blockPath` returns no row. FalkorDB being unavailable produces no decision; there is no in-memory graph fallback. The parallel check proves that concurrent proposals are blocked when the hold already exists; it does not claim to solve a race where a hold is created between the path read and order write.
 
 The demo is not a clinical system. It does not diagnose, recommend treatment, supply doses, or use real patient data.
